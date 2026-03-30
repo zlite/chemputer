@@ -9,3 +9,4 @@ BOM:
 - [Steppers with lead screws for linear motion](https://amzn.to/4tf6lsl)
 - [Camera](https://amzn.to/4sIcuxi)
 - [CNC shield and Arduino](https://amzn.to/4cg2aa0)
+- [30ml syringes](https://amzn.to/4sSEuhK)
