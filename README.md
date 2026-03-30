@@ -1,0 +1,8 @@
+Files for a minimum "chemputer" that can do closed-loop self-driving lab (SDL) experiments. 
+
+It has four syringe drives, a 3D-printed microfluidic panel for mixing and a camera mount for color and other measurements. Requires a RaspberryPi
+
+BOM:
+Steppers with lead screws for linear motion: https://amzn.to/4tf6lsl
+Camera: https://amzn.to/4sIcuxi
+CNC shield and Arduino: https://amzn.to/4cg2aa0
