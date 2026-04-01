@@ -8,5 +8,6 @@ It has four syringe drives, a 3D-printed microfluidic panel for mixing and a cam
 BOM:
 - [Steppers with lead screws for linear motion](https://amzn.to/4tf6lsl)
 - [Camera](https://amzn.to/4sIcuxi)
-- [CNC shield and Arduino](https://amzn.to/4cg2aa0)
+- [RepRap Ramps controller and Arduino Mega](https://amzn.to/4sIrRps)
+- [Limit switches](https://amzn.to/4sIrRps)
 - [30ml syringes](https://amzn.to/4sSEuhK)
