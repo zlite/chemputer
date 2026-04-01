@@ -1,5 +1,5 @@
-![Overview](overview.jpg)
-![Overview](camera.jpg)
+![Overview](overviews.jpg)
+![Camera](camera.jpg)
 
 Files for a minimum "chemputer" that can do closed-loop self-driving lab (SDL) experiments such as color mixing as shown in [this demo](https://lab-automaton.replit.app). 
 
