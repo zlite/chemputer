@@ -18,3 +18,4 @@ BOM:
 - [Limit switches](https://amzn.to/4sIrRps)
 - [30ml syringes](https://amzn.to/4sSEuhK)
 - [Solonoid valve for purge line](https://amzn.to/4sHWMS9)
+- [Standoffs](https://amzn.to/4mCUNNK)
