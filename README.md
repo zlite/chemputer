@@ -12,6 +12,8 @@ Inside the microfluidic mixer plate is shown here, with three tubes coming into 
 BOM:
 - [Steppers with lead screws for linear motion](https://amzn.to/4tf6lsl)
 - [Camera](https://amzn.to/4sIcuxi)
-- [RepRap Ramps controller and Arduino Mega](https://amzn.to/4sIrRps)
+- [RepRap Ramps 1.6 controller](https://amzn.to/4cumjs3)
+- [Arduino Mega](https://amzn.to/4cNtHji)
 - [Limit switches](https://amzn.to/4sIrRps)
 - [30ml syringes](https://amzn.to/4sSEuhK)
+- [Solonoid valve for purge line](https://amzn.to/4sHWMS9)
