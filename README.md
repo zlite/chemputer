@@ -22,7 +22,7 @@ BOM:
 - [Standoffs](https://amzn.to/4mCUNNK)
 
 
-Instructions:
+* Instructions:
 
 For the Ramps 1.6 board:
 
@@ -47,3 +47,10 @@ G1 X-10 F60
 Will move X
 
 M18 will turn off hold current on the steppers if they’re getting hot when not moving.
+
+* Software
+
+![screenshot](screenshot.png)
+
+Git clone this repo into your RaspberryPi into a directory called pi_app. Run setup.sh. Run the app with this command ``` .venv/bin/python app.py```. Open the app in a browser on the Pi with localhost:5000 or remotely with [pi IP address]:5000
+
