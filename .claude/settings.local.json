@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(v4l2-ctl --list-devices)",
+      "Read(//dev/**)",
+      "Bash(libcamera-hello --list-cameras)",
+      "Bash(rpicam-hello --list-cameras)",
+      "Bash(vcgencmd get_camera)",
+      "Bash(ls /dev/video* /dev/media*)",
+      "Bash(dmesg)",
+      "Read(//sys/firmware/devicetree/base/**)",
+      "Bash(lsusb)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5000/api/camera/frame)",
+      "Bash(ls /dev/video*)",
+      "Bash(python3 -c ':*)",
+      "Bash(v4l2-ctl -d /dev/video0 --list-formats-ext)",
+      "Bash(python3 -c \"import picamera2; print\\('picamera2 available'\\)\")",
+      "Bash(python3 -c \"from picamera2 import Picamera2; cam = Picamera2\\(\\); cam.start\\(\\); import time; time.sleep\\(1\\); frame = cam.capture_array\\(\\); print\\('shape:', frame.shape\\); cam.stop\\(\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Physical Robot Lab</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: '#1a1a2e',
+            panel: '#16213e',
+            card: '#0f3460',
+            accent: '#e94560',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: #0d0d1a; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+    .panel { background: #16213e; border: 1px solid #1e3a5f; border-radius: 0.75rem; }
+    .card  { background: #0f3460; border: 1px solid #1e3a5f; border-radius: 0.5rem; }
+    .btn   { transition: all 0.15s; cursor: pointer; border-radius: 0.5rem; font-weight: 600; padding: 0.4rem 1rem; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary  { background: #e94560; color: white; }
+    .btn-primary:hover:not(:disabled) { background: #c73652; }
+    .btn-secondary { background: #1e3a5f; color: #93c5fd; border: 1px solid #2563eb; }
+    .btn-secondary:hover:not(:disabled) { background: #2563eb; color: white; }
+    .btn-red   { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+    .btn-red:hover:not(:disabled) { background: #ef4444; color: white; }
+    .btn-orange { background: #78350f; color: #fcd34d; border: 1px solid #f59e0b; }
+    .btn-orange:hover:not(:disabled) { background: #f59e0b; color: white; }
+    .input  { background: #0d0d1a; border: 1px solid #1e3a5f; border-radius: 0.375rem; color: #e2e8f0; padding: 0.35rem 0.6rem; }
+    .input:focus { outline: 2px solid #2563eb; }
+    .log-entry { font-family: monospace; font-size: 0.75rem; padding: 2px 4px; }
+    .log-sent  { color: #60a5fa; }
+    .log-recv  { color: #34d399; }
+    .log-error { color: #f87171; }
+    .log-info  { color: #94a3b8; }
+    .score-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 9999px; font-weight: 700; }
+    .tag-success { background: #14532d; color: #86efac; }
+    .tag-fail    { background: #450a0a; color: #fca5a5; }
+    .animate-pulse-slow { animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
+    @keyframes spin-slow { to { transform: rotate(360deg); } }
+    .camera-placeholder { display: flex; align-items: center; justify-content: center; background: #050510; border-radius: 0.5rem; }
+    select option { background: #16213e; }
+    .trial-row { border-left: 3px solid transparent; padding-left: 6px; margin-bottom: 4px; border-radius: 0 4px 4px 0; }
+    .trial-row.success { border-left-color: #22c55e; background: #052e1640; }
+    .trial-row.fail    { border-left-color: #ef4444; background: #2d020240; }
+    .swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #1e3a5f; flex-shrink: 0; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d0d1a; }
+    ::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 3px; }
+    .reasoning-msg { font-size: 0.7rem; color: #7dd3fc; font-style: italic; padding: 2px 0; }
+  </style>
+</head>
+<body class="min-h-screen p-3">
+
+<!-- ═══════════════════════════════ HEADER ═══ -->
+<header class="flex items-center justify-between mb-4 px-2">
+  <div class="flex items-center gap-3">
+    <div class="text-2xl">🧪</div>
+    <div>
+      <h1 class="text-xl font-bold text-white tracking-tight">Physical Robot Lab</h1>
+      <p class="text-xs text-slate-400">RAMPS 1.4 · RGB Pump Controller · AI Color Matching</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <div id="conn-indicator" class="flex items-center gap-2 text-sm">
+      <span id="conn-dot" class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+      <span id="conn-text" class="text-slate-400">Disconnected</span>
+    </div>
+    <button class="btn btn-secondary text-xs" onclick="apiConnect()" id="btn-connect">
+      <i class="fa fa-plug mr-1"></i>Connect
+    </button>
+    <button class="btn btn-secondary text-xs" onclick="apiDisconnect()" id="btn-disconnect" style="display:none">
+      <i class="fa fa-plug-circle-xmark mr-1"></i>Disconnect
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════ MAIN GRID ══════ -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+
+  <!-- ══════════════════ LEFT COLUMN ══════════════ -->
+  <div class="flex flex-col gap-3">
+
+    <!-- Target Color Card -->
+    <div class="panel p-4">
+      <h2 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+        <i class="fa fa-bullseye text-red-400"></i> Target Color
+      </h2>
+      <div class="flex gap-2 mb-3">
+        <input type="color" id="target-picker" value="#7f00ff"
+          class="w-10 h-10 rounded cursor-pointer border-2 border-slate-600 bg-transparent"
+          oninput="onTargetColorChange(this.value)" />
+        <div class="flex-1">
+          <div class="flex items-center gap-1 mb-1">
+            <input type="text" id="target-name" value="Purple"
+              class="input flex-1 text-sm" placeholder="Color name e.g. hot pink"
+              oninput="onTargetNameChange(this.value)" />
+            <span id="name-resolve-status" class="text-xs text-slate-500 w-4 text-center"></span>
+          </div>
+          <div class="flex gap-1 text-xs text-slate-400">
+            <span>R: <span id="lbl-r">50</span>%</span>
+            <span>G: <span id="lbl-g">0</span>%</span>
+            <span>B: <span id="lbl-b">100</span>%</span>
+          </div>
+        </div>
+        <div id="target-swatch" class="swatch" style="background:#7f00ff; width:40px; height:40px; border-radius:8px;"></div>
+      </div>
+
+      <!-- Preset colors -->
+      <div class="mb-1 text-xs text-slate-500">Presets</div>
+      <div class="flex flex-wrap gap-1.5" id="presets"></div>
+    </div>
+
+    <!-- Algorithm Card -->
+    <div class="panel p-4">
+      <h2 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+        <i class="fa fa-brain text-purple-400"></i> Algorithm
+      </h2>
+      <select id="algo-select" class="input w-full text-sm mb-2">
+        {% for algo in algorithms %}
+        <option value="{{ algo }}">{{ algo }}</option>
+        {% endfor %}
+      </select>
+      <p id="algo-desc" class="text-xs text-slate-500 italic"></p>
+    </div>
+
+    <!-- Experiment Settings -->
+    <div class="panel p-4">
+      <h2 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+        <i class="fa fa-sliders text-blue-400"></i> Experiment Settings
+      </h2>
+      <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+        <div>
+          <label class="text-xs text-slate-400">Max Trials</label>
+          <input type="number" id="max-trials" value="100" min="1" max="500" class="input w-full text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Feed (mm/min)</label>
+          <input type="number" id="feed-rate" value="20" min="1" max="200" class="input w-full text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Vol/trial (mm)</label>
+          <input type="number" id="vol-mm" value="10" min="1" max="50" class="input w-full text-sm" />
+        </div>
+      </div>
+
+      <!-- LED Mode -->
+      <div class="border border-slate-700 rounded-lg p-2 mb-3">
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-xs text-slate-300 font-semibold cursor-pointer">
+            <input type="checkbox" id="led-mode" class="w-3.5 h-3.5 accent-purple-500"
+              onchange="onLedModeChange(this.checked)" />
+            <i class="fa fa-lightbulb text-purple-400"></i> LED Mode (RP2040)
+          </label>
+          <div class="flex items-center gap-2">
+            <span id="led-dot" class="w-2 h-2 rounded-full bg-slate-600"></span>
+            <button id="btn-led-connect" class="btn btn-secondary text-xs py-0.5 px-2"
+              onclick="ledConnect()" style="display:none">Connect</button>
+          </div>
+        </div>
+        <p class="text-xs text-slate-600 mt-1">RP2040 RGB LED on ttyACM* simulates camera input</p>
+        <label class="flex items-center gap-2 text-xs text-slate-400 cursor-pointer mt-1.5">
+          <input type="checkbox" id="also-move-steppers" class="w-3.5 h-3.5 accent-orange-400" />
+          <i class="fa fa-gear text-orange-400"></i> Also move steppers (debug)
+        </label>
+        <div class="flex gap-1 mt-2">
+          <input type="text" id="led-serial-input" class="input flex-1 text-xs font-mono"
+            placeholder="serial command…" onkeydown="if(event.key==='Enter') sendLedSerial()" />
+          <button class="btn btn-secondary text-xs px-2" onclick="sendLedSerial()">Send</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary w-full text-sm" id="btn-run" onclick="startExperiment()" disabled>
+        <i class="fa fa-play mr-2"></i>Run Experiment
+      </button>
+      <button class="btn btn-red w-full text-sm mt-2" id="btn-stop" onclick="stopExperiment()" style="display:none">
+        <i class="fa fa-stop mr-2"></i>Stop Experiment
+      </button>
+    </div>
+
+    <!-- Manual Jog Controls -->
+    <div class="panel p-4">
+      <h2 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+        <i class="fa fa-gamepad text-green-400"></i> Manual Controls
+      </h2>
+      <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+        <div>
+          <label class="text-xs text-slate-400">Step (mm)</label>
+          <input type="number" id="jog-step" value="0.5" step="0.1" min="0.1" max="50" class="input w-full text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Feed (mm/min)</label>
+          <input type="number" id="jog-feed" value="20" min="1" max="200" class="input w-full text-sm" />
+        </div>
+      </div>
+      <div class="grid grid-cols-4 gap-2 mb-2">
+        <!-- R pump -->
+        <div class="flex flex-col gap-1">
+          <div class="text-xs text-center font-bold text-red-400">R (X)</div>
+          <button class="btn text-xs py-1" style="background:#7f1d1d; color:#fca5a5; border:1px solid #ef4444"
+            onclick="jog('X',1)">R +</button>
+          <button class="btn text-xs py-1" style="background:#7f1d1d; color:#fca5a5; border:1px solid #ef4444"
+            onclick="jog('X',-1)">R −</button>
+        </div>
+        <!-- G pump -->
+        <div class="flex flex-col gap-1">
+          <div class="text-xs text-center font-bold text-green-400">G (Y)</div>
+          <button class="btn text-xs py-1" style="background:#14532d; color:#86efac; border:1px solid #22c55e"
+            onclick="jog('Y',1)">G +</button>
+          <button class="btn text-xs py-1" style="background:#14532d; color:#86efac; border:1px solid #22c55e"
+            onclick="jog('Y',-1)">G −</button>
+        </div>
+        <!-- B pump -->
+        <div class="flex flex-col gap-1">
+          <div class="text-xs text-center font-bold text-blue-400">B (Z)</div>
+          <button class="btn text-xs py-1" style="background:#1e3a8a; color:#93c5fd; border:1px solid #3b82f6"
+            onclick="jog('Z',1)">B +</button>
+          <button class="btn text-xs py-1" style="background:#1e3a8a; color:#93c5fd; border:1px solid #3b82f6"
+            onclick="jog('Z',-1)">B −</button>
+        </div>
+        <!-- E stepper -->
+        <div class="flex flex-col gap-1">
+          <div class="text-xs text-center font-bold text-purple-400">E</div>
+          <button class="btn text-xs py-1" style="background:#3b0764; color:#e9d5ff; border:1px solid #a855f7"
+            onclick="jog('E',1)">E +</button>
+          <button class="btn text-xs py-1" style="background:#3b0764; color:#e9d5ff; border:1px solid #a855f7"
+            onclick="jog('E',-1)">E −</button>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-orange text-xs flex-1" onclick="homeAll()">
+          <i class="fa fa-home mr-1"></i>HOME ALL
+        </button>
+        <button class="btn btn-red text-xs flex-1" onclick="stopSteppers()">
+          <i class="fa fa-power-off mr-1"></i>STOP (M18)
+        </button>
+      </div>
+      <button class="btn text-xs w-full mt-2" style="background:#374151; color:#d1d5db"
+        onclick="fanPulse()">
+        <i class="fa fa-wind mr-1"></i>Empty / Mix (Fan + Extrude)
+      </button>
+
+      <!-- Manual GCode -->
+      <div class="mt-3 flex gap-2">
+        <input type="text" id="gcode-input" class="input flex-1 text-xs font-mono"
+          placeholder="G1 X1.0 F20" onkeydown="if(event.key==='Enter') sendGCode()" />
+        <button class="btn btn-secondary text-xs" onclick="sendGCode()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ CENTER COLUMN ══════════════ -->
+  <div class="flex flex-col gap-3">
+
+    <!-- Camera Feed -->
+    <div class="panel p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <i class="fa fa-camera text-yellow-400"></i> Camera Feed
+        </h2>
+        <div class="flex gap-2">
+          <button class="btn btn-secondary text-xs" onclick="sampleColor()">
+            <i class="fa fa-eye-dropper mr-1"></i>Sample
+          </button>
+        </div>
+      </div>
+      <div class="relative">
+        <img id="camera-img" src="" alt="Camera feed"
+          class="w-full rounded-lg border border-slate-700 hidden"
+          style="max-height: 260px; object-fit: contain; background: #050510;" />
+        <div id="camera-placeholder" class="camera-placeholder h-52 rounded-lg border border-slate-700">
+          <div class="text-center text-slate-600">
+            <i class="fa fa-camera text-4xl mb-2"></i>
+            <p class="text-sm">Camera initialising…</p>
+          </div>
+        </div>
+      </div>
+      <!-- ROI sliders -->
+      <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400">
+        <div>
+          <label>ROI X1: <span id="roi-x1-val">35%</span></label>
+          <input type="range" min="0" max="100" value="35" id="roi-x1" class="w-full accent-blue-500" oninput="updateROI()" />
+        </div>
+        <div>
+          <label>ROI X2: <span id="roi-x2-val">65%</span></label>
+          <input type="range" min="0" max="100" value="65" id="roi-x2" class="w-full accent-blue-500" oninput="updateROI()" />
+        </div>
+        <div>
+          <label>ROI Y1: <span id="roi-y1-val">35%</span></label>
+          <input type="range" min="0" max="100" value="35" id="roi-y1" class="w-full accent-blue-500" oninput="updateROI()" />
+        </div>
+        <div>
+          <label>ROI Y2: <span id="roi-y2-val">65%</span></label>
+          <input type="range" min="0" max="100" value="65" id="roi-y2" class="w-full accent-blue-500" oninput="updateROI()" />
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Reasoning Panel -->
+    <div class="panel p-4 flex flex-col" style="min-height: 160px;">
+      <h2 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+        <i class="fa fa-robot text-cyan-400"></i> Algorithm Reasoning
+        <span id="reasoning-spinner" class="hidden ml-2">
+          <i class="fa fa-circle-notch fa-spin text-cyan-400 text-xs"></i>
+        </span>
+      </h2>
+      <div id="reasoning-log" class="flex-1 overflow-y-auto" style="max-height: 120px;">
+        <p class="reasoning-msg text-slate-600 italic">Waiting for experiment to start...</p>
+      </div>
+    </div>
+
+    <!-- Current Mix Color -->
+    <div class="panel p-4">
+      <h2 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+        <i class="fa fa-flask text-purple-400"></i> Current Mix
+      </h2>
+      <div class="flex items-center gap-4">
+        <div id="mix-swatch" class="rounded-lg border-2 border-slate-600 flex-shrink-0"
+          style="width:64px; height:64px; background:#1a1a2e;"></div>
+        <div class="flex-1">
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-red-400">R</span>
+            <span id="mix-r-pct" class="text-slate-300">—</span>
+          </div>
+          <div class="h-2 rounded bg-slate-800 mb-2 overflow-hidden">
+            <div id="mix-r-bar" class="h-full bg-red-500 rounded" style="width:0%"></div>
+          </div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-green-400">G</span>
+            <span id="mix-g-pct" class="text-slate-300">—</span>
+          </div>
+          <div class="h-2 rounded bg-slate-800 mb-2 overflow-hidden">
+            <div id="mix-g-bar" class="h-full bg-green-500 rounded" style="width:0%"></div>
+          </div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-blue-400">B</span>
+            <span id="mix-b-pct" class="text-slate-300">—</span>
+          </div>
+          <div class="h-2 rounded bg-slate-800 overflow-hidden">
+            <div id="mix-b-bar" class="h-full bg-blue-500 rounded" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="text-center">
+          <div id="current-score" class="text-3xl font-bold text-white">—</div>
+          <div class="text-xs text-slate-400">score</div>
+        </div>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <div class="text-xs text-slate-500">Target:</div>
+        <div id="target-hex-label" class="text-xs font-mono text-slate-300">#7f00ff</div>
+        <div id="target-swatch-small" class="w-4 h-4 rounded-sm" style="background:#7f00ff"></div>
+      </div>
+    </div>
+
+    <!-- Color Calibration -->
+    <div class="panel p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <i class="fa fa-wand-magic-sparkles text-green-400"></i> Color Calibration
+        </h2>
+        <button class="btn btn-secondary text-xs" onclick="resetAllCalibration()">
+          <i class="fa fa-rotate-left mr-1"></i>Reset All
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 mb-3">Place each pure dye under the camera, then capture to set its real-world target RGB.</p>
+      <div id="calibration-table" class="flex flex-col"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ RIGHT COLUMN ══════════════ -->
+  <div class="flex flex-col gap-3">
+
+    <!-- Score Graph -->
+    <div class="panel p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <i class="fa fa-chart-line text-green-400"></i> Score Progress
+        </h2>
+        <button class="btn btn-secondary text-xs" onclick="resetGraph()">Reset</button>
+      </div>
+      <canvas id="score-chart" height="150"></canvas>
+    </div>
+
+    <!-- Experiment Log -->
+    <div class="panel p-4 flex flex-col" style="flex: 1;">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <i class="fa fa-list text-indigo-400"></i> Trial Results
+        </h2>
+        <button class="btn btn-secondary text-xs" onclick="clearTrials()">Clear</button>
+      </div>
+      <div id="trial-log" class="overflow-y-auto flex-1 text-xs" style="max-height: 220px;">
+        <p class="text-slate-600 italic text-center mt-4">No trials yet</p>
+      </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div id="status-banner" class="hidden panel p-3">
+      <div class="flex items-center gap-3">
+        <div id="status-icon" class="text-2xl"></div>
+        <div>
+          <div id="status-title" class="text-sm font-bold text-white"></div>
+          <div id="status-msg" class="text-xs text-slate-400"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Serial Console -->
+    <div class="panel p-4 flex flex-col">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <i class="fa fa-terminal text-slate-400"></i> Serial Console
+        </h2>
+        <button class="btn btn-secondary text-xs" onclick="clearConsole()">Clear</button>
+      </div>
+      <div id="console-log" class="overflow-y-auto bg-black bg-opacity-40 rounded p-2 text-xs font-mono"
+        style="max-height: 200px; min-height: 80px;">
+        <span class="text-slate-600">Ready.</span>
+      </div>
+    </div>
+  </div>
+</div><!-- end main grid -->
+
+<!-- ══════════════════════════════ SCRIPTS ═══════════════════════════════ -->
+<script>
+// ─────────────────────────────────── constants ──
+
+const PRESETS = [
+  { name: "Red",     hex: "#ff0000", r: 1,   g: 0,   b: 0   },
+  { name: "Green",   hex: "#00ff00", r: 0,   g: 1,   b: 0   },
+  { name: "Blue",    hex: "#0000ff", r: 0,   g: 0,   b: 1   },
+  { name: "Yellow",  hex: "#ffff00", r: 0.5, g: 0.5, b: 0   },
+  { name: "Magenta", hex: "#ff00ff", r: 0.5, g: 0,   b: 0.5 },
+  { name: "Cyan",    hex: "#00ffff", r: 0,   g: 0.5, b: 0.5 },
+  { name: "Orange",  hex: "#ff6600", r: 0.6, g: 0.2, b: 0   },
+  { name: "Purple",  hex: "#7f00ff", r: 0.5, g: 0,   b: 1   },
+  { name: "White",   hex: "#ffffff", r: 1,   g: 1,   b: 1   },
+];
+
+// Original PRESETS values before any calibration is applied
+const PRESETS_ORIGINAL = PRESETS.map(p => ({ ...p }));
+
+const ALGO_DESCS = {
+  "Gradient Descent":      "AI-guided gradient steps, adjusts direction toward target",
+  "Bayesian Optimization": "Models color space as Gaussian process with UCB acquisition",
+  "Evolutionary Strategy": "Population-based crossover and mutation of best candidates",
+  "Thompson Sampling":     "Probabilistic multi-armed bandit — samples from posteriors",
+};
+
+// ─────────────────────────────── state ──
+
+let targetRgb = { r: 0.5, g: 0, b: 1 };
+let connected  = false;
+let experimenting = false;
+let scoreHistory = [];
+let cameraOpen = false;
+let cameraInterval = null;
+let calibrationData = {};   // { "Red": {r, g, b, hex}, ... } — saved to server
+let pendingCapture  = {};   // { "Red": {r, g, b, hex} }       — captured, not yet saved
+
+// ─────────────────────────────── chart setup ──
+
+const ctx = document.getElementById('score-chart').getContext('2d');
+const scoreChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{
+      label: 'Score',
+      data: [],
+      borderColor: '#22d3ee',
+      backgroundColor: 'rgba(34,211,238,0.08)',
+      tension: 0.3,
+      pointRadius: 4,
+      pointBackgroundColor: '#22d3ee',
+      fill: true,
+    }, {
+      label: 'Target (90)',
+      data: [],
+      borderColor: '#f97316',
+      borderDash: [5, 5],
+      pointRadius: 0,
+      fill: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+    scales: {
+      x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e3a5f' } },
+      y: { min: 0, max: 100, ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e3a5f' } }
+    }
+  }
+});
+
+// ─────────────────────────────── SSE ──
+
+function startSSE() {
+  const es = new EventSource('/api/stream');
+
+  es.addEventListener('log', e => {
+    const d = JSON.parse(e.data);
+    appendConsole(d.ts, d.msg, d.tag);
+  });
+
+  es.addEventListener('experiment_start', e => {
+    const d = JSON.parse(e.data);
+    resetGraph();
+    clearTrials();
+    document.getElementById('status-banner').classList.add('hidden');
+    addReasoning(`Starting experiment: ${d.target_name} with ${d.algorithm}`);
+  });
+
+  es.addEventListener('trial_start', e => {
+    const d = JSON.parse(e.data);
+    updateMixDisplay(d.r, d.g, d.b, null, null);
+  });
+
+  es.addEventListener('trial_result', e => {
+    const d = JSON.parse(e.data);
+    updateMixDisplay(d.r, d.g, d.b, d.score, d.mix_hex);
+    addTrialRow(d);
+    addScorePoint(d.trial, d.score);
+  });
+
+  es.addEventListener('experiment_end', e => {
+    const d = JSON.parse(e.data);
+    setExperimenting(false);
+    showStatusBanner(d);
+  });
+
+  es.addEventListener('reasoning', e => {
+    const d = JSON.parse(e.data);
+    addReasoning(d.msg);
+  });
+
+  es.onerror = () => { setTimeout(startSSE, 3000); es.close(); };
+}
+
+// ─────────────────────────────── presets ──
+
+function buildPresets() {
+  const container = document.getElementById('presets');
+  PRESETS.forEach(p => {
+    const btn = document.createElement('button');
+    btn.title = p.name;
+    btn.style.cssText = `width:28px; height:28px; border-radius:50%; background:${p.hex}; border:2px solid #1e3a5f; cursor:pointer;`;
+    btn.onclick = () => selectPreset(p);
+    container.appendChild(btn);
+  });
+}
+
+function selectPreset(p) {
+  document.getElementById('target-picker').value = p.hex;
+  document.getElementById('target-name').value = p.name;
+  targetRgb = { r: p.r, g: p.g, b: p.b };
+  updateTargetDisplay(p.hex, p.r, p.g, p.b);
+}
+
+// ─────────────────────────────── target color ──
+
+let _nameResolveTimer = null;
+
+function onTargetNameChange(name) {
+  const q = name.toLowerCase().trim();
+
+  // Instant preset match (exact or prefix)
+  const match = PRESETS.find(p => p.name.toLowerCase() === q)
+             || PRESETS.find(p => p.name.toLowerCase().startsWith(q));
+  if (match) {
+    document.getElementById('target-picker').value = match.hex;
+    targetRgb = { r: match.r, g: match.g, b: match.b };
+    updateTargetDisplay(match.hex, match.r, match.g, match.b);
+    document.getElementById('name-resolve-status').textContent = '';
+    if (_nameResolveTimer) { clearTimeout(_nameResolveTimer); _nameResolveTimer = null; }
+    return;
+  }
+
+  // No preset match — debounce then call the NLP resolver
+  if (_nameResolveTimer) clearTimeout(_nameResolveTimer);
+  if (q.length < 2) { document.getElementById('name-resolve-status').textContent = ''; return; }
+  document.getElementById('name-resolve-status').textContent = '…';
+  _nameResolveTimer = setTimeout(() => resolveColorName(name.trim()), 600);
+}
+
+async function resolveColorName(name) {
+  const statusEl = document.getElementById('name-resolve-status');
+  statusEl.textContent = '⟳';
+  try {
+    const r = await fetch('/api/color/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('target-picker').value = d.hex;
+      targetRgb = { r: d.r, g: d.g, b: d.b };
+      updateTargetDisplay(d.hex, d.r, d.g, d.b);
+      statusEl.textContent = '✓';
+      appendConsole(now(), `Resolved "${name}" → ${d.hex}  R=${(d.r*100).toFixed(1)}% G=${(d.g*100).toFixed(1)}% B=${(d.b*100).toFixed(1)}%`, 'info');
+      setTimeout(() => { statusEl.textContent = ''; }, 2000);
+    } else {
+      statusEl.textContent = '?';
+      appendConsole(now(), `Could not resolve "${name}": ${d.error || 'unknown error'}`, 'error');
+    }
+  } catch {
+    statusEl.textContent = '?';
+  }
+}
+
+function onTargetColorChange(hex) {
+  const r = parseInt(hex.slice(1,3), 16) / 255;
+  const g = parseInt(hex.slice(3,5), 16) / 255;
+  const b = parseInt(hex.slice(5,7), 16) / 255;
+  targetRgb = { r, g, b };
+  updateTargetDisplay(hex, r, g, b);
+}
+
+function updateTargetDisplay(hex, r, g, b) {
+  document.getElementById('target-swatch').style.background = hex;
+  document.getElementById('target-swatch-small').style.background = hex;
+  document.getElementById('target-hex-label').textContent = hex;
+  const total = r + g + b || 1;
+  document.getElementById('lbl-r').textContent = Math.round(r/total*100);
+  document.getElementById('lbl-g').textContent = Math.round(g/total*100);
+  document.getElementById('lbl-b').textContent = Math.round(b/total*100);
+}
+
+// ─────────────────────────────── algo desc ──
+
+function updateAlgoDesc() {
+  const sel = document.getElementById('algo-select').value;
+  document.getElementById('algo-desc').textContent = ALGO_DESCS[sel] || '';
+}
+
+// ─────────────────────────────── connection ──
+
+async function apiConnect() {
+  const r = await fetch('/api/connect', { method: 'POST' });
+  const d = await r.json();
+  if (d.ok) {
+    setConnected(true, d.port);
+  } else {
+    setConnected(false, d.error);
+    appendConsole(now(), `Connection failed: ${d.error}`, 'error');
+  }
+}
+
+async function apiDisconnect() {
+  await fetch('/api/disconnect', { method: 'POST' });
+  setConnected(false, 'Disconnected');
+}
+
+function setConnected(ok, info) {
+  connected = ok;
+  const dot  = document.getElementById('conn-dot');
+  const text = document.getElementById('conn-text');
+  const btnC = document.getElementById('btn-connect');
+  const btnD = document.getElementById('btn-disconnect');
+  const btnR = document.getElementById('btn-run');
+
+  if (ok) {
+    dot.className  = 'w-2.5 h-2.5 rounded-full bg-green-400';
+    text.textContent = info;
+    text.className = 'text-green-400 text-sm';
+    btnC.style.display = 'none';
+    btnD.style.display = '';
+    btnR.disabled = false;
+  } else {
+    dot.className  = 'w-2.5 h-2.5 rounded-full bg-red-500';
+    text.textContent = info || 'Disconnected';
+    text.className = 'text-slate-400 text-sm';
+    btnC.style.display = '';
+    btnD.style.display = 'none';
+    btnR.disabled = !document.getElementById('led-mode').checked;
+  }
+}
+
+// ─────────────────────────────── manual controls ──
+
+async function jog(axis, dir) {
+  const step = parseFloat(document.getElementById('jog-step').value);
+  const feed = parseFloat(document.getElementById('jog-feed').value);
+  await fetch('/api/jog', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ axis, direction: dir, step, feed }) });
+}
+
+async function homeAll() {
+  await fetch('/api/home', { method:'POST' });
+}
+
+async function stopSteppers() {
+  await fetch('/api/stop', { method:'POST' });
+}
+
+async function fanPulse() {
+  await fetch('/api/empty', { method:'POST' });
+}
+
+async function sendGCode() {
+  const inp = document.getElementById('gcode-input');
+  const cmd = inp.value.trim();
+  if (!cmd) return;
+  await fetch('/api/send', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ cmd }) });
+  inp.value = '';
+}
+
+// ─────────────────────────────── camera ──
+
+async function openCamera() {
+  const r = await fetch('/api/camera/open', { method:'POST' });
+  const d = await r.json();
+  if (d.ok) {
+    cameraOpen = true;
+    document.getElementById('camera-placeholder').style.display = 'none';
+    document.getElementById('camera-img').classList.remove('hidden');
+    startCameraRefresh();
+  } else {
+    appendConsole(now(), 'Camera open failed — check CAMERA_INDEX in app.py', 'error');
+  }
+}
+
+function startCameraRefresh() {
+  if (cameraInterval) clearInterval(cameraInterval);
+  cameraInterval = setInterval(() => {
+    const img = document.getElementById('camera-img');
+    img.src = `/api/camera/frame?t=${Date.now()}`;
+  }, 250);
+}
+
+async function sampleColor() {
+  const r = await fetch('/api/camera/sample');
+  const d = await r.json();
+  if (d.ok) {
+    const hex = d.hex;
+    appendConsole(now(), `Sampled: ${hex}  R=${(d.r*100).toFixed(1)}% G=${(d.g*100).toFixed(1)}% B=${(d.b*100).toFixed(1)}%`, 'recv');
+  } else {
+    appendConsole(now(), 'Sample failed — is camera open?', 'error');
+  }
+}
+
+async function updateROI() {
+  const x1 = parseInt(document.getElementById('roi-x1').value) / 100;
+  const x2 = parseInt(document.getElementById('roi-x2').value) / 100;
+  const y1 = parseInt(document.getElementById('roi-y1').value) / 100;
+  const y2 = parseInt(document.getElementById('roi-y2').value) / 100;
+  document.getElementById('roi-x1-val').textContent = Math.round(x1*100) + '%';
+  document.getElementById('roi-x2-val').textContent = Math.round(x2*100) + '%';
+  document.getElementById('roi-y1-val').textContent = Math.round(y1*100) + '%';
+  document.getElementById('roi-y2-val').textContent = Math.round(y2*100) + '%';
+  await fetch('/api/camera/roi', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ roi: [x1, y1, x2, y2] }) });
+}
+
+// ─────────────────────────────── LED mode ──
+
+let ledConnected = false;
+
+function onLedModeChange(enabled) {
+  document.getElementById('btn-led-connect').style.display    = enabled && !ledConnected ? '' : 'none';
+
+  document.getElementById('btn-run').disabled = !enabled && !connected;
+  if (enabled && !ledConnected) ledConnect();
+  if (!enabled && !connected)   apiConnect();
+}
+
+async function ledConnect() {
+  const r = await fetch('/api/led/connect', { method: 'POST' });
+  const d = await r.json();
+  if (d.ok) {
+    ledConnected = true;
+    document.getElementById('led-dot').className = 'w-2 h-2 rounded-full bg-purple-400';
+    document.getElementById('btn-led-connect').style.display = 'none';
+    appendConsole(now(), 'LED simulator connected', 'info');
+  } else {
+    appendConsole(now(), `LED connect failed: ${d.error}`, 'error');
+  }
+}
+
+async function sendLedSerial() {
+  const inp = document.getElementById('led-serial-input');
+  const cmd = inp.value.trim();
+  if (!cmd) return;
+  const r = await fetch('/api/led/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cmd }),
+  });
+  const d = await r.json();
+  if (d.ok) {
+    appendConsole(now(), `LED >> ${cmd}`, 'sent');
+    inp.value = '';
+  } else {
+    appendConsole(now(), `LED send failed: ${d.error}`, 'error');
+  }
+}
+
+async function ledDisconnect() {
+  await fetch('/api/led/disconnect', { method: 'POST' });
+  ledConnected = false;
+  document.getElementById('led-dot').className = 'w-2 h-2 rounded-full bg-slate-600';
+  document.getElementById('btn-led-connect').style.display = '';
+  appendConsole(now(), 'LED simulator disconnected', 'info');
+}
+
+// ─────────────────────────────── experiment ──
+
+async function startExperiment() {
+  const ledMode = document.getElementById('led-mode').checked;
+  if (!connected && !ledMode) return;
+  const targetName = document.getElementById('target-name').value || 'Custom';
+  const algorithm  = document.getElementById('algo-select').value;
+  const maxTrials  = parseInt(document.getElementById('max-trials').value);
+  const feed       = parseFloat(document.getElementById('feed-rate').value);
+
+  const r = await fetch('/api/experiment/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target_name: targetName, target_rgb: targetRgb,
+                           algorithm, max_trials: maxTrials, feed,
+                           use_camera: true, led_mode: ledMode,
+                           also_move_steppers: document.getElementById('also-move-steppers').checked })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    setExperimenting(true);
+    document.getElementById('reasoning-spinner').classList.remove('hidden');
+  } else {
+    appendConsole(now(), `Start failed: ${d.error}`, 'error');
+  }
+}
+
+async function stopExperiment() {
+  await fetch('/api/experiment/stop', { method:'POST' });
+  setExperimenting(false);
+}
+
+function setExperimenting(running) {
+  experimenting = running;
+  document.getElementById('btn-run').style.display = running ? 'none' : '';
+  document.getElementById('btn-stop').style.display = running ? '' : 'none';
+  document.getElementById('reasoning-spinner').classList.toggle('hidden', !running);
+}
+
+// ─────────────────────────────── display updates ──
+
+function updateMixDisplay(r, g, b, score, hex) {
+  const total = r + g + b || 100;
+  const rp = (r / total * 100).toFixed(1);
+  const gp = (g / total * 100).toFixed(1);
+  const bp = (b / total * 100).toFixed(1);
+
+  document.getElementById('mix-r-pct').textContent = rp + '%';
+  document.getElementById('mix-g-pct').textContent = gp + '%';
+  document.getElementById('mix-b-pct').textContent = bp + '%';
+  document.getElementById('mix-r-bar').style.width = rp + '%';
+  document.getElementById('mix-g-bar').style.width = gp + '%';
+  document.getElementById('mix-b-bar').style.width = bp + '%';
+
+  if (hex) {
+    document.getElementById('mix-swatch').style.background = hex;
+  }
+  if (score !== null) {
+    document.getElementById('current-score').textContent = score.toFixed(1);
+    const scoreEl = document.getElementById('current-score');
+    scoreEl.style.color = score >= 90 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#f87171';
+  }
+}
+
+function addTrialRow(d) {
+  const log = document.getElementById('trial-log');
+  const empty = log.querySelector('.text-slate-600.italic');
+  if (empty) empty.remove();
+
+  const success = d.score >= 90;
+  const div = document.createElement('div');
+  div.className = `trial-row ${success ? 'success' : 'fail'}`;
+  div.innerHTML = `
+    <div class="flex items-center gap-2">
+      <div class="swatch flex-shrink-0" style="width:20px;height:20px;background:${d.mix_hex}"></div>
+      <div class="flex-1">
+        <div class="flex items-center gap-1">
+          <span class="text-slate-400">Trial ${d.trial}</span>
+          <span class="score-badge ${success ? 'tag-success' : 'tag-fail'}">${d.score.toFixed(1)}</span>
+          ${success ? '<span class="text-green-400 text-xs"><i class="fa fa-check"></i></span>' : ''}
+        </div>
+        <div class="text-slate-500" style="font-size:0.65rem">
+          R${d.r.toFixed(1)}% G${d.g.toFixed(1)}% B${d.b.toFixed(1)}%
+        </div>
+      </div>
+    </div>
+  `;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function addScorePoint(trial, score) {
+  scoreHistory.push({ trial, score });
+  scoreChart.data.labels.push(`T${trial}`);
+  scoreChart.data.datasets[0].data.push(score);
+  scoreChart.data.datasets[1].data.push(90);
+  scoreChart.update();
+}
+
+function showStatusBanner(d) {
+  const banner = document.getElementById('status-banner');
+  banner.classList.remove('hidden');
+  banner.style.borderColor = d.success ? '#22c55e' : '#ef4444';
+  document.getElementById('status-icon').textContent = d.success ? '✅' : '⚠️';
+  document.getElementById('status-title').textContent = d.success ? 'Experiment Success!' : 'Experiment Ended';
+  document.getElementById('status-msg').textContent = d.msg;
+  if (d.mix_hex) {
+    banner.style.background = d.mix_hex + '22';
+  }
+}
+
+// ─────────────────────────────── reasoning log ──
+
+function addReasoning(msg) {
+  const log = document.getElementById('reasoning-log');
+  const waiting = log.querySelector('.text-slate-600.italic');
+  if (waiting) waiting.remove();
+  const p = document.createElement('p');
+  p.className = 'reasoning-msg';
+  p.textContent = `› ${msg}`;
+  log.appendChild(p);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ─────────────────────────────── console ──
+
+function appendConsole(ts, msg, tag) {
+  const log = document.getElementById('console-log');
+  const span = document.createElement('div');
+  span.className = `log-entry log-${tag}`;
+  span.textContent = `[${ts}] ${msg}`;
+  log.appendChild(span);
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearConsole() {
+  document.getElementById('console-log').innerHTML = '';
+}
+
+// ─────────────────────────────── graph ──
+
+function resetGraph() {
+  scoreHistory = [];
+  scoreChart.data.labels = [];
+  scoreChart.data.datasets[0].data = [];
+  scoreChart.data.datasets[1].data = [];
+  scoreChart.update();
+}
+
+function clearTrials() {
+  document.getElementById('trial-log').innerHTML = '<p class="text-slate-600 italic text-center mt-4">No trials yet</p>';
+}
+
+// ─────────────────────────────── status polling ──
+
+async function pollStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    if (d.connected !== connected) {
+      setConnected(d.connected, d.port || 'Disconnected');
+    }
+    if (d.experiment_running !== experimenting) {
+      setExperimenting(d.experiment_running);
+    }
+    if (d.led_connected !== ledConnected) {
+      ledConnected = d.led_connected;
+      document.getElementById('led-dot').className =
+        'w-2 h-2 rounded-full ' + (ledConnected ? 'bg-purple-400' : 'bg-slate-600');
+      const ledModeOn = document.getElementById('led-mode').checked;
+      document.getElementById('btn-led-connect').style.display    = ledModeOn && !ledConnected ? '' : 'none';
+      document.getElementById('btn-led-disconnect').style.display = ledModeOn && ledConnected  ? '' : 'none';
+    }
+  } catch {}
+}
+
+// ─────────────────────────────── utils ──
+
+function now() {
+  return new Date().toLocaleTimeString('en-GB', { hour12: false });
+}
+
+// ─────────────────────────────── calibration ──
+
+async function loadCalibration() {
+  const r = await fetch('/api/calibrate');
+  calibrationData = await r.json();
+  applyCalibrationToPresets();
+  buildCalibrationTable();
+}
+
+function applyCalibrationToPresets() {
+  PRESETS.forEach((p, i) => {
+    const cal = calibrationData[p.name];
+    if (cal) {
+      p.r = cal.r; p.g = cal.g; p.b = cal.b;
+    } else {
+      // Restore original if calibration was cleared
+      p.r = PRESETS_ORIGINAL[i].r;
+      p.g = PRESETS_ORIGINAL[i].g;
+      p.b = PRESETS_ORIGINAL[i].b;
+    }
+  });
+  // Refresh target display if current name matches a preset
+  const currentName = document.getElementById('target-name').value.trim().toLowerCase();
+  const match = PRESETS.find(p => p.name.toLowerCase() === currentName);
+  if (match) {
+    targetRgb = { r: match.r, g: match.g, b: match.b };
+    updateTargetDisplay(match.hex, match.r, match.g, match.b);
+  }
+}
+
+function buildCalibrationTable() {
+  const table = document.getElementById('calibration-table');
+  table.innerHTML = '';
+  PRESETS.filter(p => ['Red', 'Green', 'Blue'].includes(p.name)).forEach(p => {
+    const cal     = calibrationData[p.name];
+    const pending = pendingCapture[p.name];
+    const orig    = PRESETS_ORIGINAL.find(o => o.name === p.name);
+
+    const displayHex = pending ? pending.hex : (cal ? cal.hex : null);
+
+    const calSwatch = displayHex
+      ? `<div title="Camera: ${displayHex}" style="width:16px;height:16px;border-radius:3px;background:${displayHex};border:1px solid ${pending ? '#f59e0b' : '#22c55e'};flex-shrink:0"></div>`
+      : `<div title="Not calibrated" style="width:16px;height:16px;border-radius:3px;background:#0d0d1a;border:1px dashed #374151;flex-shrink:0"></div>`;
+
+    let statusHtml;
+    if (pending)       statusHtml = `<span class="text-yellow-400 text-xs">${pending.hex} — save?</span>`;
+    else if (cal)      statusHtml = `<span class="text-green-400 text-xs">${cal.hex}</span>`;
+    else               statusHtml = `<span class="text-slate-600 text-xs">not set</span>`;
+
+    const saveBtn  = pending ? `<button class="btn text-xs px-2 py-0" style="background:#14532d;color:#86efac;border:1px solid #22c55e" onclick="saveCalibration('${p.name}')"><i class="fa fa-check"></i></button>` : '';
+    const clearBtn = cal     ? `<button class="btn text-xs px-2 py-0" style="background:#450a0a;color:#fca5a5;border:1px solid #ef4444" onclick="clearCalibration('${p.name}')"><i class="fa fa-xmark"></i></button>` : '';
+
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2 py-1.5 border-b border-slate-800 last:border-0';
+    row.innerHTML = `
+      <div style="width:14px;height:14px;border-radius:2px;background:${orig.hex};border:1px solid #1e3a5f;flex-shrink:0"></div>
+      <span class="text-xs text-slate-300 w-14 flex-shrink-0">${p.name}</span>
+      ${calSwatch}
+      <div class="flex-1 truncate">${statusHtml}</div>
+      <button class="btn btn-secondary text-xs px-2 py-0" onclick="captureCalibration('${p.name}')"><i class="fa fa-camera"></i></button>
+      ${saveBtn}${clearBtn}
+    `;
+    table.appendChild(row);
+  });
+}
+
+const LED_PRIMARY = {
+  'Red':   { r: 0,  g: 25, b: 0  },
+  'Green': { r: 25, g: 0,  b: 0  },
+  'Blue':  { r: 0,  g: 0,  b: 25 },
+};
+
+async function captureCalibration(name) {
+  if (!cameraOpen) {
+    appendConsole(now(), 'Open the camera first', 'error');
+    return;
+  }
+  if (document.getElementById('led-mode').checked && ledConnected && LED_PRIMARY[name]) {
+    const { r, g, b } = LED_PRIMARY[name];
+    await fetch('/api/led/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ r, g, b }),
+    });
+    await new Promise(res => setTimeout(res, 400)); // let camera settle
+  }
+  const r = await fetch('/api/camera/sample');
+  const d = await r.json();
+  if (!d.ok) {
+    appendConsole(now(), 'Sample failed — is camera open?', 'error');
+    return;
+  }
+  pendingCapture[name] = { r: d.r, g: d.g, b: d.b, hex: d.hex };
+  appendConsole(now(), `Captured ${name}: ${d.hex}  R=${(d.r*100).toFixed(1)}% G=${(d.g*100).toFixed(1)}% B=${(d.b*100).toFixed(1)}%`, 'recv');
+  buildCalibrationTable();
+}
+
+async function saveCalibration(name) {
+  const pending = pendingCapture[name];
+  if (!pending) return;
+  await fetch('/api/calibrate/set', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, ...pending }),
+  });
+  calibrationData[name] = { ...pending };
+  delete pendingCapture[name];
+  applyCalibrationToPresets();
+  appendConsole(now(), `Saved calibration for ${name}`, 'info');
+  buildCalibrationTable();
+}
+
+async function clearCalibration(name) {
+  await fetch('/api/calibrate/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  delete calibrationData[name];
+  delete pendingCapture[name];
+  applyCalibrationToPresets();
+  appendConsole(now(), `Cleared calibration for ${name}`, 'info');
+  buildCalibrationTable();
+}
+
+async function resetAllCalibration() {
+  if (!confirm('Reset all calibrated values?')) return;
+  await fetch('/api/calibrate/reset', { method: 'POST' });
+  calibrationData = {};
+  pendingCapture  = {};
+  applyCalibrationToPresets();
+  appendConsole(now(), 'All calibrations cleared', 'info');
+  buildCalibrationTable();
+}
+
+// ─────────────────────────────── init ──
+
+buildPresets();
+updateAlgoDesc();
+updateTargetDisplay('#7f00ff', 0.5, 0, 1);
+document.getElementById('algo-select').addEventListener('change', updateAlgoDesc);
+loadCalibration();
+startSSE();
+setInterval(pollStatus, 3000);
+openCamera();
+apiConnect();
+</script>
+</body>
+</html>
