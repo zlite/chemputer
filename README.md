@@ -54,6 +54,8 @@ M18 will turn off hold current on the steppers if they’re getting hot when not
 
 Git clone this repo into your RaspberryPi into a directory called pi_app. Run setup.sh. Run the app with this command ``` .venv/bin/python app.py```. Open the app in a browser on the Pi with localhost:5000 or remotely with [pi IP address]:5000
 
+*Using a RGB LED to fake the colors
+
 ![screenshot](rp2040.jpeg)
 
 If you want to use a RP2040 to fake the colored water to avoid water mess while you're testing, I recommend a [Waveshare RP2040-zero](https://amzn.to/4ck8JIR) which you can clamp onto the other side of the mixing chamber window as shown. Switch the RP2040 to CircuitPython by holding down the boot button when you plug it in via USB on your PC and copy over the CircuitPython image you download [here](https://circuitpython.org/board/waveshare_rp2040_zero/) to the drive that shows up. The drive will change its name from "RPI-RP2" to "CIRCUITPY" as explained [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython). Copy "neopixel.mpy" from this repo into the "lib" folder on this drive, then copy "code.py" into the root directory. It will start showing rainbow colors, which indicates that you did it right. Plug the board into one of your Pi's USB ports. Once you start the SDL app and click the LED Mode checkbox, the app wil talk to the RP2040 and will change its colors as needed for the experiments.
