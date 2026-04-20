@@ -22,7 +22,7 @@ BOM:
 - [Standoffs](https://amzn.to/4mCUNNK)
 
 
-Instructions:
+* Instructions:
 
 For the Ramps 1.6 board:
 
@@ -47,3 +47,12 @@ G1 X-10 F60
 Will move X
 
 M18 will turn off hold current on the steppers if they’re getting hot when not moving.
+
+* Software
+
+![screenshot](screenshot.png)
+
+Git clone this repo into your RaspberryPi into a directory called pi_app. Run setup.sh. Run the app with this command ``` .venv/bin/python app.py```. Open the app in a browser on the Pi with localhost:5000 or remotely with [pi IP address]:5000
+
+If you want to use a RP2040 to fake the colored water, I recommend a [Waveshare RP2040-zero](https://amzn.to/4ck8JIR). Switch it to CircuitPython by holding down the boot button when you plug it in via USB and copying over the CircuitPython image you download [here](https://circuitpython.org/board/waveshare_rp2040_zero/) to the drive that shows up. The drive will change its name from "RPI-RP2" to "CIRCUITPY" as explained [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython). Copy "neopixel.mpy" from this repo into the "lib" folder on this drive, then copy "code.py" into the root directory. It will start showing rainbow colors, which indicates that you did it right. Plug the board into one of your Pi's USB ports. Once you start the SDL app and click the LED Mode checkbox, the app wil talk to the RP2040 and will change its colors as needed for the experiments.
+
