@@ -20,3 +20,30 @@ BOM:
 - [30ml syringes](https://amzn.to/4sSEuhK)
 - [Solonoid valve for purge line](https://amzn.to/4sHWMS9)
 - [Standoffs](https://amzn.to/4mCUNNK)
+
+
+Instructions:
+
+For the Ramps 1.6 board:
+
+First, don’t get the older Ramps 1.4 version, which has serious design and QA problems in my experience; among other things the D9 out doesn’t work.
+
+The software that the standard Chinese Ramps manufacturer steers you to is probably broken and rubbish (wrong settings for the LCD panel, which won’t work, and expecting all sorts of 3D printer stuff, like temperature sensors, that you don’t have). Ignore their instructions!
+
+Instead, do this: 
+
+Download the modified Marlin software [here](https://github.com/V1EngineeringInc/MarlinBuilder/releases) (it’s adapted for CNC machines, but that won’t be a problem)
+
+Unzip the files, including the source code zip file inside that zip. In the Arduino IDE, open Marlin.ino from the source folder and that will open a bunch of other files. You’re going to need to go into the library manager and install some libraries as well: U8glib-HAL and U8lib.
+
+Once you’ve installed them, you should be able to compile the code for the Arduino Mega and upload it. This will run and show a menu on the LCD, if you have one. 
+
+To get steppers moving, use Gcode via the Arduino Serial terminal (250000 baud):
+
+G91
+G1 X10 F60
+G1 X-10 F60
+
+Will move X
+
+M18 will turn off hold current on the steppers if they’re getting hot when not moving.
