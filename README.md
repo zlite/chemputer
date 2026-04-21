@@ -3,9 +3,9 @@
 
 Files for a <$100 minimum "chemputer" that can do closed-loop self-driving lab (SDL) experiments such as color mixing as shown in [this demo](https://lab-automaton.replit.app). 
 
-It has four syringe drives, a 3D-printed microfluidic panel for mixing and a camera mount for color and other measurements. Requires a RaspberryPi
+It has four syringe drives, a 3D-printed microfluidic (actually, more precisely "millifluidic") panel for mixing and a camera mount for color and other measurements. Requires a RaspberryPi
 
-Inside the microfluidic mixer plate is shown here, with three tubes coming into the mixing chamber and one coming out below, with a vent tube at the top to avoid pressure issues
+Inside the millifluidic mixer plate is shown here, with three tubes coming into the mixing chamber and one coming out below, with a vent tube at the top to avoid pressure issues
 
 ![Mixer panel](inside_mixer.png)
 
