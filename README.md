@@ -3,9 +3,9 @@
 
 Files for a <$100 minimum "chemputer" that can do closed-loop self-driving lab (SDL) experiments such as color mixing as shown in [this demo](https://lab-automaton.replit.app). 
 
-It has four syringe drives, a 3D-printed microfluidic panel for mixing and a camera mount for color and other measurements. Requires a RaspberryPi
+It has four syringe drives, a 3D-printed microfluidic (actually, more precisely "millifluidic") panel for mixing and a camera mount for color and other measurements. Requires a RaspberryPi
 
-Inside the microfluidic mixer plate is shown here, with three tubes coming into the mixing chamber and one coming out below, with a vent tube at the top to avoid pressure issues
+Inside the millifluidic mixer plate is shown here, with three tubes coming into the mixing chamber and one coming out below, with a vent tube at the top to avoid pressure issues
 
 ![Mixer panel](inside_mixer.png)
 
@@ -22,7 +22,7 @@ BOM:
 - [Standoffs](https://amzn.to/4mCUNNK)
 
 
-* Instructions:
+## Instructions:
 
 For the Ramps 1.6 board:
 
@@ -48,11 +48,15 @@ Will move X
 
 M18 will turn off hold current on the steppers if they’re getting hot when not moving.
 
-* Software
+## Software
 
 ![screenshot](screenshot.png)
 
 Git clone this repo into your RaspberryPi into a directory called pi_app. Run setup.sh. Run the app with this command ``` .venv/bin/python app.py```. Open the app in a browser on the Pi with localhost:5000 or remotely with [pi IP address]:5000
 
-If you want to use a RP2040 to fake the colored water, I recommend a [Waveshare RP2040-zero](https://amzn.to/4ck8JIR). Switch it to CircuitPython by holding down the boot button when you plug it in via USB and copying over the CircuitPython image you download [here](https://circuitpython.org/board/waveshare_rp2040_zero/) to the drive that shows up. The drive will change its name from "RPI-RP2" to "CIRCUITPY" as explained [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython). Copy "neopixel.mpy" from this repo into the "lib" folder on this drive, then copy "code.py" into the root directory. It will start showing rainbow colors, which indicates that you did it right. Plug the board into one of your Pi's USB ports. Once you start the SDL app and click the LED Mode checkbox, the app wil talk to the RP2040 and will change its colors as needed for the experiments.
+## Using a RGB LED to fake the colors
+
+![screenshot](rp2040.jpeg)
+
+If you want to use a RP2040 to fake the colored water to avoid water mess while you're testing, I recommend a [Waveshare RP2040-zero](https://amzn.to/4ck8JIR) which you can clamp onto the other side of the mixing chamber window as shown. Switch the RP2040 to CircuitPython by holding down the boot button when you plug it in via USB on your PC and copy over the CircuitPython image you download [here](https://circuitpython.org/board/waveshare_rp2040_zero/) to the drive that shows up. The drive will change its name from "RPI-RP2" to "CIRCUITPY" as explained [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython). Copy "neopixel.mpy" from this repo into the "lib" folder on this drive, then copy "code.py" into the root directory. It will start showing rainbow colors, which indicates that you did it right. Plug the board into one of your Pi's USB ports. Once you start the SDL app and click the LED Mode checkbox, the app wil talk to the RP2040 and will change its colors as needed for the experiments.
 
